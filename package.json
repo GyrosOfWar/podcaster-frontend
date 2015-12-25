@@ -1,0 +1,25 @@
+{
+  "name": "podcaster-frontend",
+  "version": "0.1.0",
+  "devDependencies": {
+    "babel-core": "^6.3.17",
+    "babel-loader": "^6.2.0",
+    "babel-plugin-transform-react-jsx": "^6.3.13",
+    "babel-preset-es2015": "^6.3.13",
+    "babel-standard": "^0.2.0",
+    "history": "^1.13.1",
+    "jquery": "^2.1.4",
+    "load-grunt-tasks": "^3.3.0",
+    "moment": "^2.10.6",
+    "react": "^0.14.3",
+    "react-bootstrap": "^0.28.1",
+    "react-dom": "^0.14.3",
+    "react-router": "^1.0.2",
+    "webpack": "^1.12.9",
+    "webpack-dev-server": "^1.14.0"
+  },
+  "scripts": {
+    "start": "webpack-dev-server -d --hot --port 9090",
+    "build": "webpack"
+  }
+}

@@ -5,8 +5,9 @@ module.exports = {
   output: {
     path: "build",
     filename: "bundle.js",
-    publicPath: "/public/"
+    publicPath: "/static/"
   },
+
   module: {
     loaders: [{
       test: /\.jsx?$/,

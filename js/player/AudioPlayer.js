@@ -73,6 +73,7 @@ const Player = React.createClass({
     ];
 
     var songName;
+    // dead code
     if (this.songCount() > 1) {
       topComponents.push(
         <SongList ref="songList" className="pull-left"

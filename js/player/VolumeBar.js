@@ -1,5 +1,6 @@
 import React from 'react'
 import classnames from 'classnames'
+import $ from 'jquery'
 import { Button, Glyphicon } from 'react-bootstrap'
 
 var uniquleId = 0

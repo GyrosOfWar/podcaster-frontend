@@ -17,9 +17,11 @@ module.exports = {
         sourceMap: true,
         plugins: ['transform-react-jsx'],
         presets: ['es2015']
-      }
-      }]
-    },
+      }},
+
+      { test: /\.scss$/, loader: "style!css!sass" }
+    ]
+  },
 
     devServer: {
       inline: true,

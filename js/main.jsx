@@ -1,3 +1,5 @@
+require("./../sass/app.scss")
+
 import React from 'react'
 import { Router, Route, IndexRoute, Link } from 'react-router'
 import ReactDOM from 'react-dom'
@@ -9,7 +11,8 @@ const INITIAL_ITEM_COUNT = 15
 
 const App = React.createClass({
   render() {
-    const songs = [{url: 'http://www.giantbomb.com/podcasts/download/1460/Giant_Bombcast_12_22_2015-12-22-2015-2201689492.mp3'}]
+    const songs = [{url: 'http://www.giantbomb.com/podcasts/download/1460/Giant_Bombcast_12_22_2015-12-22-2015-2201689492.mp3',
+    name: 'Giant Bombcast'}]
 
     return (
       <div>
@@ -20,7 +23,11 @@ const App = React.createClass({
             </Navbar.Brand>
           </Navbar.Header>
         </Navbar>
-        <Player songs={songs}/>
+        <Grid>
+          <Row>
+            <Player songs={songs}/>
+          </Row>
+        </Grid>
         {this.props.children}
       </div>)
   }

@@ -4,15 +4,64 @@ import React from 'react'
 import { Router, Route, IndexRoute, Link } from 'react-router'
 import ReactDOM from 'react-dom'
 import $ from 'jquery'
-import {Navbar, Button, Grid, Row, Col, Image, Nav, NavItem } from 'react-bootstrap'
+import { Navbar, Button, Grid, Row, Col, Image, Nav, NavItem, Glyphicon } from 'react-bootstrap'
 import Player from './player/AudioPlayer'
+import moment from 'moment'
 
 const INITIAL_ITEM_COUNT = 15
+const UPDATE_POSITION_INTERVAL = 15
 
 const App = React.createClass({
+  getInitialState() {
+    return {
+      currentItem: null,
+      lastPositionUpdate: 0
+    }
+  },
+
+  handlePodcastSelected(item) {
+    this.setState({currentItem: item})
+  },
+
+  handleTick(item, time) {
+    const now = moment()
+    const nextUpdate = moment(this.state.lastPositionUpdate).add(moment(UPDATE_POSITION_INTERVAL, 'seconds'))
+
+    if (now.isBefore(nextUpdate)) {
+      return
+    }
+
+    const t = Math.round(time)
+    $.ajax({
+      url: `/api/update_position/${item.id}/${t}`,
+      method: 'POST',
+      success: response => {
+        if (response === 'OK') {
+          this.setState({
+            lastPositionUpdate: moment()
+          })
+
+        }
+      }
+    })
+
+  },
+
   render() {
-    const songs = [{url: 'http://www.giantbomb.com/podcasts/download/1460/Giant_Bombcast_12_22_2015-12-22-2015-2201689492.mp3',
-    name: 'Giant Bombcast'}]
+    let player;
+    const item = this.state.currentItem
+
+    if (item) {
+      player = <Player podcast={item} tickCallback={this.handleTick}/>
+    } else {
+      player = null
+    }
+    let positionUpdate = <br />
+
+    if (this.state.lastPositionUpdate !== 0) {
+      const time = this.state.lastPositionUpdate
+      positionUpdate = <Row><p>Last sync: {time.fromNow()}</p></Row>
+    }
 
     return (
       <div>
@@ -25,10 +74,13 @@ const App = React.createClass({
         </Navbar>
         <Grid>
           <Row>
-            <Player songs={songs}/>
+            {player}
           </Row>
+          {positionUpdate}
         </Grid>
-        {this.props.children}
+        {this.props.children && React.cloneElement(this.props.children, {
+          itemClickedCallback: this.handlePodcastSelected
+          })}
       </div>)
   }
 })
@@ -46,12 +98,8 @@ const PodcastList = React.createClass({
     $.ajax({
       url: this.state.url,
       dataType: 'json',
-      success: function (data) {
-        this.setState({podcasts: data})
-      }.bind(this),
-      error: function (xhr, status, err) {
-        console.error(this.props.url, status, err.toString())
-      }.bind(this)
+      success: data => this.setState({podcasts: data}),
+      error: (xhr, status, err) => console.error(this.props.url, status, err.toString())
     })
   },
 
@@ -101,12 +149,8 @@ const PodcastDetails = React.createClass({
     $.ajax({
       url: url,
       dataType: 'json',
-      success: function (data) {
-        this.setState({items: data.items})
-      }.bind(this),
-      error: function (xhr, status, err) {
-        console.error(url, status, err.toString())
-      }
+      success: data => this.setState({items: data.items}),
+      error: (xhr, status, err) => console.error(url, status, err.toString())
     })
   },
 
@@ -116,8 +160,8 @@ const PodcastDetails = React.createClass({
   },
 
   render: function () {
-    let items = this.state.items.map(function (item) {
-      return (<PodcastItem data={item}/>)
+    let items = this.state.items.map(item => {
+      return (<PodcastItem data={item} key={item.id} itemClickedCallback={this.props.itemClickedCallback}/>)
     })
     return (
       <Grid id="podcast-details">
@@ -128,8 +172,17 @@ const PodcastDetails = React.createClass({
 })
 
 const PodcastItem = React.createClass({
+
+  clickItem: function () {
+    this.props.itemClickedCallback(this.props.data)
+  },
+
   render: function () {
-    let item = this.props.data
+    const item = this.props.data
+    const lastPos = moment.duration(item.last_position, 'seconds')
+    const lastPosStr = `${lastPos.hours()} hr ${lastPos.minutes()} min`
+    const duration = moment.duration(item.duration, 'seconds')
+    const durationStr = `${duration.hours()} hr ${duration.minutes()} min`
 
     return (
       <div className="media podcast-item">
@@ -143,11 +196,15 @@ const PodcastItem = React.createClass({
           <h4 className="media-heading">{item.title}</h4>
           <p className="description">{item.description}</p>
           <div className="col-md-6 played-time">
-            <p>Played <b>{item.last_position_string}</b> of <b>{item.duration_string}</b></p>
+            <p>Played <b>{lastPosStr}</b> of <b>{durationStr}</b></p>
           </div>
           <div className="item-buttons pull-right">
-            <Button>Play</Button>
-            <Button>Reset</Button>
+            <Button onClick={this.clickItem}>
+              <Glyphicon glyph="play"/> Play
+            </Button>
+            <Button>
+              <Glyphicon glyph="fast-backward"/> Reset
+            </Button>
           </div>
         </div>
       </div>

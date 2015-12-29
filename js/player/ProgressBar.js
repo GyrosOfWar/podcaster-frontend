@@ -1,6 +1,7 @@
 import React from 'react'
 // import { ProgressBar } from 'react-bootstrap'
 import classnames from 'classnames'
+import $ from 'jquery'
 
 const ProgressBar = React.createClass({
 

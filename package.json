@@ -26,6 +26,6 @@
   },
   "scripts": {
     "start": "webpack-dev-server -d --hot --port 9090",
-    "build": "webpack -p"
+    "build": "webpack -p --progress"
   }
 }

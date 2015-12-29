@@ -1,10 +1,8 @@
 import React from 'react'
 import ButtonPanel from './ButtonPanel'
 import ProgressBar from './ProgressBar'
-import VolumeBar from './VolumeBar'
 import TimeLabel from './TimeLabel'
 import NameLabel from './NameLabel'
-import SongList from './SongList'
 import SongFormatterMixin from  './SongFormatterMixin'
 import { Howl } from 'howler'
 
@@ -13,79 +11,55 @@ const Player = React.createClass({
   mixins: [SongFormatterMixin],
 
   getDefaultProps: function () {
-    return {songs: []};
+    return {podcast: null}
   },
 
   getInitialState: function () {
     return {
       isPlaying: false,
       isPause: false,
-      isLoading: false,
-      currentSongIndex: -1,
-      volume: 0.5
-    };
+      isLoading: false
+    }
   },
 
   componentWillMount: function () {
-
-    if (this.props.dataUrl) {
-      $.ajax({
-        dataType: "json",
-        url: this.props.dataUrl,
-        success: function (response) {
-          this.setState({
-            songs: response.songs,
-            currentSongIndex: 0
-          });
-        }.bind(this)
-      });
-    } else if (this.props.songs) {
+    if (this.props.podcast) {
+      console.log("AudioPlayer.componentWillMount")
       this.setState({
-        songs: this.props.songs,
-        currentSongIndex: 0
-      });
-    } else {
-      throw "no data";
+        podcast: this.props.podcast
+      })
     }
   },
 
   componentDidUpdate: function (prevProps, prevState, prevContext) {
-    if (this.state.isPlaying && this.state.currentSongIndex != prevState.currentSongIndex) {
-      this.initSoundObject();
+    const lastId = prevProps.podcast.id
+    const currentId = this.props.podcast.id
+    if (!this.state.isLoading && lastId !== currentId) {
+      this.initSoundObject()
+      console.log('init sound object')
+      console.log(`lastId = ${lastId} currentId = ${currentId}`)
+      this.setState({
+        podcast: this.props.podcast
+      })
     }
   },
 
   render: function () {
-    var songCount = this.songCount();
-    var percent = 0;
+    var percent = 0
     if (this.state.seek && this.state.duration) {
-      percent = this.state.seek / this.state.duration;
+      percent = this.state.seek / this.state.duration
     }
 
     var topComponents = [
       <ButtonPanel isPlaying={this.state.isPlaying} isPause={this.state.isPause}
                    isLoading={this.state.isLoading}
-                   currentSongIndex={this.state.currentSongIndex} songCount={songCount}
+                   currentSongIndex={this.state.currentSongIndex}
                    onPlayBtnClick={this.onPlayBtnClick} onPauseBtnClick={this.onPauseBtnClick}
                    onPrevBtnClick={this.onPrevBtnClick} onNextBtnClick={this.onNextBtnClick}/>,
-      <ProgressBar shorter={songCount > 1} percent={percent} seekTo={this.seekTo}/>,
-      <VolumeBar volume={this.state.volume} adjustVolumeTo={this.adjustVolumeTo}/>
-    ];
+      <ProgressBar percent={percent} seekTo={this.seekTo}/>
+    ]
 
-    var songName;
-    // dead code
-    if (this.songCount() > 1) {
-      topComponents.push(
-        <SongList ref="songList" className="pull-left"
-                  songs={this.state.songs}
-                  currentSongIndex={this.state.currentSongIndex}
-                  isPlaying={this.state.isPlaying} isPause={this.state.isPause}
-                  onSongItemClick={this.onSongItemClick}/>
-      );
-      songName = (this.state.currentSongIndex + 1) + ". " + this.getCurrentSongName();
-    } else {
-      songName = this.getCurrentSongName();
-    }
+    var songName = this.getCurrentSongName()
 
     return (
       <div className="audio-player">
@@ -99,184 +73,117 @@ const Player = React.createClass({
         </div>
 
       </div>
-    );
+    )
   },
 
   onPlayBtnClick: function () {
     if (this.state.isPlaying && !this.state.isPause) {
-      return;
+      return
     }
-    ;
-    this.play();
+
+    this.play()
   },
 
   onPauseBtnClick: function () {
-    var isPause = !this.state.isPause;
-    this.setState({isPause: isPause});
-    isPause ? this.pause() : this._play();
+    var isPause = !this.state.isPause
+    this.setState({isPause: isPause})
+    isPause ? this.pause() : this._play()
   },
 
   onPrevBtnClick: function () {
-    this.prev();
+    this.prev()
   },
 
   onNextBtnClick: function () {
-    this.next();
-  },
-
-  onSongItemClick: function (songIndex) {
-    // handle pause/playing state.
-    if (this.state.currentSongIndex == songIndex) {
-      if (this.state.isPause) {
-        this.onPauseBtnClick();
-        this.refs.songList.hideDropdownMenu();
-      } else if (!this.state.isPlaying) {
-        this.onPlayBtnClick();
-        this.refs.songList.hideDropdownMenu();
-      }
-      return;
-    }
-
-    // handle index change state, it must change to play.
-    this.stop();
-    this.clearSoundObject();
-    this.setState({
-      currentSongIndex: songIndex,
-      duration: 0,
-      isPlaying: true,
-      isPause: false
-    });
-    this.refs.songList.hideDropdownMenu();
-
+    this.next()
   },
 
   play: function () {
-
-    this.setState({isPlaying: true, isPause: false});
+    console.log("AudioPlayer.play()")
+    this.setState({isPlaying: true, isPause: false})
 
     if (!this.howler) {
-      this.initSoundObject();
+      this.initSoundObject()
     } else {
-      var songUrl = this.state.songs[this.state.currentSongIndex].url;
+      var songUrl = this.state.podcast.mp3_url
       if (songUrl != this.howler._src) {
-        this.initSoundObject();
+        this.initSoundObject()
       } else {
-        this._play();
+        this._play()
       }
     }
   },
 
   initSoundObject: function () {
-    this.clearSoundObject();
-    this.setState({isLoading: true});
+    this.clearSoundObject()
+    this.setState({isLoading: true})
+    console.log("AudioPlayer.initSoundObject")
 
-    var song = this.state.songs[this.state.currentSongIndex];
     this.howler = new Howl({
-      src: song.url,
-      volume: this.state.volume,
+      src: this.state.podcast.mp3_url,
+      volume: 1.0,
       onload: this.initSoundObjectCompleted,
-      onend: this.playEnd
-    });
+      buffer: true
+    })
   },
 
   clearSoundObject: function () {
     if (this.howler) {
-      this.howler.stop();
-      this.howler = null;
+      this.howler.stop()
+      this.howler = null
     }
   },
 
   initSoundObjectCompleted: function () {
-    this._play();
+    this._play()
+    console.log('AudioPlayer.initSoundObjectCompleted')
+    console.log("Duration: " + this.howler.duration())
     this.setState({
       duration: this.howler.duration(),
       isLoading: false
-    });
+    })
   },
 
   _play: function () {
-    this.howler.play();
-    this.stopUpdateCurrentDuration();
-    this.updateCurrentDuration();
-    this.interval = setInterval(this.updateCurrentDuration, 1000);
-  },
-
-  playEnd: function () {
-    if (this.state.currentSongIndex == this.state.songs.length - 1) {
-      this.stop();
-    } else {
-      this.next();
-    }
+    this.howler.play()
+    this.stopUpdateCurrentDuration()
+    this.updateCurrentDuration()
+    this.interval = setInterval(this.updateCurrentDuration, 1000)
   },
 
   stop: function () {
-    this.stopUpdateCurrentDuration();
-    this.setState({seek: 0, isPlaying: false});
+    this.stopUpdateCurrentDuration()
+    this.setState({seek: 0, isPlaying: false})
   },
 
   pause: function () {
-    this.howler.pause();
-    this.stopUpdateCurrentDuration();
-  },
-
-  prev: function () {
-    if (this.state.seek > 1 || this.state.currentSongIndex == 0) {
-      this.seekTo(0);
-    } else {
-      this.updateSongIndex(this.state.currentSongIndex - 1);
-    }
-  },
-
-  next: function () {
-    this.updateSongIndex(this.state.currentSongIndex + 1);
-  },
-
-  updateSongIndex: function (index) {
-    this.setState({
-      currentSongIndex: index,
-      duration: 0
-    });
-    if (this.state.isPause) {
-      this.stop();
-      this.clearSoundObject();
-    } else {
-      this.stopUpdateCurrentDuration();
-    }
+    this.howler.pause()
+    this.stopUpdateCurrentDuration()
   },
 
   updateCurrentDuration: function () {
-    this.setState({seek: this.howler.seek()});
+    this.setState({seek: this.howler.seek()})
+    this.props.tickCallback(this.state.podcast, this.state.seek)
   },
 
   stopUpdateCurrentDuration: function () {
-    clearInterval(this.interval);
+    clearInterval(this.interval)
   },
 
   seekTo: function (percent) {
-    var seek = this.state.duration * percent;
-    this.howler.seek(seek);
-    this.setState({seek: seek});
-  },
-
-  adjustVolumeTo: function (percent) {
-    this.setState({volume: percent});
-    if (this.howler) {
-      this.howler.volume(percent);
-    }
-  },
-
-  songCount: function () {
-    return this.state.songs ? this.state.songs.length : 0;
+    var seek = this.state.duration * percent
+    this.howler.seek(seek)
+    this.setState({seek: seek})
   },
 
   getCurrentSongName: function () {
-    if (this.state.currentSongIndex < 0) {
-      return "";
+    if (this.state.podcast) {
+      return this.state.podcast.title
+    } else {
+      return ""
     }
-    var song = this.state.songs[this.state.currentSongIndex];
-    return this.getSongName(song);
   }
 
-});
+})
 
 export default Player

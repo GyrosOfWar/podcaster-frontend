@@ -24,9 +24,9 @@ const Player = React.createClass({
 
   componentWillMount: function () {
     if (this.props.podcast) {
-      console.log("AudioPlayer.componentWillMount")
+      const podcast = this.props.podcast
       this.setState({
-        podcast: this.props.podcast
+        podcast: podcast
       })
     }
   },
@@ -36,35 +36,30 @@ const Player = React.createClass({
     const currentId = this.props.podcast.id
     if (!this.state.isLoading && lastId !== currentId) {
       this.initSoundObject()
-      console.log('init sound object')
-      console.log(`lastId = ${lastId} currentId = ${currentId}`)
       this.setState({
-        podcast: this.props.podcast
+        podcast: this.props.podcast,
+        isPlaying: false,
+        isPause: false,
+        isLoading: false
       })
     }
   },
 
   render: function () {
-    var percent = 0
+    let percent = 0
     if (this.state.seek && this.state.duration) {
       percent = this.state.seek / this.state.duration
     }
-
-    var topComponents = [
-      <ButtonPanel isPlaying={this.state.isPlaying} isPause={this.state.isPause}
-                   isLoading={this.state.isLoading}
-                   currentSongIndex={this.state.currentSongIndex}
-                   onPlayBtnClick={this.onPlayBtnClick} onPauseBtnClick={this.onPauseBtnClick}
-                   onPrevBtnClick={this.onPrevBtnClick} onNextBtnClick={this.onNextBtnClick}/>,
-      <ProgressBar percent={percent} seekTo={this.seekTo}/>
-    ]
-
-    var songName = this.getCurrentSongName()
-
+    let songName = this.getCurrentSongName()
     return (
       <div className="audio-player">
         <div className="clearfix">
-          { topComponents }
+          <ButtonPanel isPlaying={this.state.isPlaying} isPause={this.state.isPause}
+                       isLoading={this.state.isLoading}
+                       currentSongIndex={this.state.currentSongIndex}
+                       onPlayBtnClick={this.onPlayBtnClick} onPauseBtnClick={this.onPauseBtnClick}
+                       onPrevBtnClick={this.onPrevBtnClick} onNextBtnClick={this.onNextBtnClick}/>
+          <ProgressBar percent={percent} seekTo={this.seekTo}/>
         </div>
 
         <div className="audio-desc-container clearfix">
@@ -85,7 +80,7 @@ const Player = React.createClass({
   },
 
   onPauseBtnClick: function () {
-    var isPause = !this.state.isPause
+    let isPause = !this.state.isPause
     this.setState({isPause: isPause})
     isPause ? this.pause() : this._play()
   },
@@ -99,13 +94,12 @@ const Player = React.createClass({
   },
 
   play: function () {
-    console.log("AudioPlayer.play()")
     this.setState({isPlaying: true, isPause: false})
 
     if (!this.howler) {
       this.initSoundObject()
     } else {
-      var songUrl = this.state.podcast.mp3_url
+      let songUrl = this.state.podcast.mp3_url
       if (songUrl != this.howler._src) {
         this.initSoundObject()
       } else {
@@ -117,7 +111,6 @@ const Player = React.createClass({
   initSoundObject: function () {
     this.clearSoundObject()
     this.setState({isLoading: true})
-    console.log("AudioPlayer.initSoundObject")
 
     this.howler = new Howl({
       src: this.state.podcast.mp3_url,
@@ -135,9 +128,9 @@ const Player = React.createClass({
   },
 
   initSoundObjectCompleted: function () {
+    const lastPos = this.props.podcast.last_position
     this._play()
-    console.log('AudioPlayer.initSoundObjectCompleted')
-    console.log("Duration: " + this.howler.duration())
+    this.seekToSeconds(lastPos)
     this.setState({
       duration: this.howler.duration(),
       isLoading: false
@@ -170,8 +163,13 @@ const Player = React.createClass({
     clearInterval(this.interval)
   },
 
+  seekToSeconds: function (s) {
+    this.howler.seek(s)
+    this.setState({seek: s})
+  },
+
   seekTo: function (percent) {
-    var seek = this.state.duration * percent
+    let seek = this.state.duration * percent
     this.howler.seek(seek)
     this.setState({seek: seek})
   },

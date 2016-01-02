@@ -1,4 +1,4 @@
-module.exports = {
+const SongFormatterMixin = {
 	
 	getSongName: function(song) {
 		if (song.hasOwnProperty("name")) {
@@ -9,3 +9,5 @@ module.exports = {
 		}
 	}
 }
+
+export default SongFormatterMixin

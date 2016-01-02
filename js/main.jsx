@@ -4,7 +4,7 @@ import React from 'react'
 import { Router, Route, IndexRoute, Link } from 'react-router'
 import ReactDOM from 'react-dom'
 import $ from 'jquery'
-import { Navbar, Button, Grid, Row, Col, Image, Nav, NavItem, Glyphicon, Modal } from 'react-bootstrap'
+import { Navbar, Button, Grid, Row, Col, Image, Nav, NavItem, Glyphicon, Modal, Pagination } from 'react-bootstrap'
 import Player from './player/AudioPlayer'
 import moment from 'moment'
 
@@ -233,7 +233,8 @@ const PodcastDetails = React.createClass({
   getInitialState: function () {
     return {
       items: [],
-      page: null
+      page: null,
+      pageCount: null
     }
   },
 
@@ -245,7 +246,10 @@ const PodcastDetails = React.createClass({
     $.ajax({
       url: url,
       dataType: 'json',
-      success: data => this.setState({items: data.items}),
+      success: data => this.setState({
+        items: data.items,
+        pageCount: data.page_count
+      }),
       error: (xhr, status, err) => console.error(url, status, err.toString())
     })
   },
@@ -286,13 +290,20 @@ const PodcastDetails = React.createClass({
     this.getItems(newProps.params.id, newProps.params.page)
   },
 
+  handlePageSelect: function (event, selectedEvent) {
+    this.setState({
+      page: selectedEvent.eventKey
+    })
+    this.getItems(this.props.params.id, selectedEvent.eventKey)
+  },
+
   render: function () {
     let items = this.state.items.map(item => {
       return (<PodcastDetailItem data={item} key={item.id} itemClickedCallback={this.props.itemClickedCallback}/>)
     })
-    if (items.length === 0) {
-      return <NotFound />
-    }
+
+    const pagination = <Pagination prev next first last ellipsis items={this.state.pageCount} maxButtons={5}
+                                   activePage={this.state.page} onSelect={this.handlePageSelect}/>
 
     return (
       <Grid id="podcast-details">
@@ -307,6 +318,7 @@ const PodcastDetails = React.createClass({
           </Col>
         </Row>
         {items}
+        {pagination}
       </Grid>
     )
   }

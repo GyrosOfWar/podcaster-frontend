@@ -116,7 +116,7 @@ const Player = React.createClass({
       src: this.state.podcast.mp3_url,
       volume: 1.0,
       onload: this.initSoundObjectCompleted,
-      buffer: true
+      html5: true
     })
   },
 

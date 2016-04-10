@@ -8,6 +8,14 @@ module.exports = {
     publicPath: "/static/"
   },
 
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env': {
+        'NODE_ENV': JSON.stringify('production')
+      }
+    })
+  ],
+
   module: {
     loaders: [{
       test: /\.jsx?$/,
@@ -17,22 +25,23 @@ module.exports = {
         sourceMap: true,
         plugins: ['transform-react-jsx'],
         presets: ['es2015']
-      }},
+      }
+    },
 
-      { test: /\.scss$/, loader: "style!css!sass" }
+      {test: /\.scss$/, loader: "style!css!sass"}
     ]
   },
 
-    devServer: {
-      inline: true,
-      progress: true,
-      stats: 'errors-only',
-      devtool: 'eval-source-map',
-      proxy: {
-        '/api/*': {
-          target: 'http://localhost:5501',
-          secure: false
-        }
+  devServer: {
+    inline: true,
+    progress: true,
+    stats: 'errors-only',
+    devtool: 'eval-source-map',
+    proxy: {
+      '/api/*': {
+        target: 'http://localhost:5501',
+        secure: false
       }
     }
+  }
 };

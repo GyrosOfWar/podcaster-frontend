@@ -362,21 +362,17 @@ const PodcastDetails = React.createClass({
 
   filterFavorites: function () {
     if (this.state.showingFavorites) {
-      console.log("Not showing favorites anymore")
       this.setState({
         showingFavorites: false
       })
     } else {
-      console.log("Else 1")
       if (this.state.favorites.length == 0) {
-        console.log("If 1")
         const id = this.props.params.id
         $.ajax({
           url: `/api/podcast/favorites/${id}`,
           method: 'GET',
           dataType: 'json',
           success: response => {
-            console.log(response)
             this.setState({
               favorites: response,
               showingFavorites: true
@@ -384,7 +380,6 @@ const PodcastDetails = React.createClass({
           }
         })
       } else {
-        console.log("Else 2")
         this.setState({
           showingFavorites: true
         })

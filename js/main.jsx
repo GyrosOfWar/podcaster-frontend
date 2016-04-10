@@ -1,10 +1,10 @@
 require("./../sass/app.scss")
 
 import React from 'react'
-import { Router, Route, IndexRoute, Link } from 'react-router'
+import { Router, Route, IndexRoute, Link, hashHistory } from 'react-router'
 import ReactDOM from 'react-dom'
 import $ from 'jquery'
-import { Navbar, Button, Grid, Row, Col, Image, Nav, NavItem, Glyphicon, Modal, Pagination } from 'react-bootstrap'
+import { Navbar, Button, Grid, Row, Col, Image, Nav, NavItem, Glyphicon, Modal, Pagination, Input } from 'react-bootstrap'
 import Player from './player/AudioPlayer'
 import moment from 'moment'
 
@@ -149,7 +149,7 @@ const PodcastList = React.createClass({
       $.ajax({
         url: '/api/podcast/',
         method: 'POST',
-        payload: {url: feedUrl},
+        data: {url: feedUrl},
         done: item => {
           this.setState({
             podcasts: [...this.state.podcasts, item]
@@ -229,12 +229,39 @@ const Podcast = React.createClass({
   }
 })
 
+const SearchBox = React.createClass({
+  keyPressed: function () {
+    const input = $('#search-box').val()
+    const id = this.props.feedId
+    if (input.length >= 3) {
+      $.ajax({
+        url: `/api/podcast/search/${id}`,
+        method: 'POST',
+        data: {query: input},
+        dataType: 'json',
+        success: response => {
+          this.props.searchResultCallback(response)
+        }
+      })
+    } else {
+      this.props.searchFinishedCallback()
+    }
+  },
+  render: function () {
+    return <Input type="text" placeholder="Search" onChange={this.keyPressed} id="search-box"/>
+  }
+})
+
 const PodcastDetails = React.createClass({
   getInitialState: function () {
     return {
       items: [],
       page: null,
-      pageCount: null
+      pageCount: null,
+      showingFavorites: false,
+      searching: false,
+      searchResults: [],
+      favorites: []
     }
   },
 
@@ -246,10 +273,12 @@ const PodcastDetails = React.createClass({
     $.ajax({
       url: url,
       dataType: 'json',
-      success: data => this.setState({
-        items: data.items,
-        pageCount: data.page_count
-      }),
+      success: data => {
+        this.setState({
+          items: data.items,
+          pageCount: data.page_count
+        })
+      },
       error: (xhr, status, err) => console.error(url, status, err.toString())
     })
   },
@@ -274,6 +303,7 @@ const PodcastDetails = React.createClass({
       method: 'POST',
       dataType: 'json',
       success: result => {
+        result.reverse()
         this.setState({
           items: [...result, ...this.state.items]
         })
@@ -297,24 +327,108 @@ const PodcastDetails = React.createClass({
     this.getItems(this.props.params.id, selectedEvent.eventKey)
   },
 
+  handleItemFavorited: function (item) {
+    const id = item.id
+    $.ajax({
+      url: `/api/podcasts/fav/${id}`,
+      method: 'POST',
+      success: response => {
+        // TODO could be a lot more efficient
+        const newItems = this.state.items.slice()
+        const itemToChange = newItems.find(item => item.id === id)
+        const idx = newItems.indexOf(itemToChange)
+        itemToChange.favorited = response === 'true'
+        newItems[idx] = itemToChange
+
+        this.setState({
+          items: newItems
+        })
+      }
+    })
+  },
+
+  handleSearch: function (response) {
+    this.setState({
+      searchResults: response,
+      searching: true
+    })
+  },
+
+  handleSearchStopped: function () {
+    this.setState({
+      searching: false
+    })
+  },
+
+  filterFavorites: function () {
+    if (this.state.showingFavorites) {
+      console.log("Not showing favorites anymore")
+      this.setState({
+        showingFavorites: false
+      })
+    } else {
+      console.log("Else 1")
+      if (this.state.favorites.length == 0) {
+        console.log("If 1")
+        const id = this.props.params.id
+        $.ajax({
+          url: `/api/podcast/favorites/${id}`,
+          method: 'GET',
+          dataType: 'json',
+          success: response => {
+            console.log(response)
+            this.setState({
+              favorites: response,
+              showingFavorites: true
+            })
+          }
+        })
+      } else {
+        console.log("Else 2")
+        this.setState({
+          showingFavorites: true
+        })
+      }
+    }
+  },
+
   render: function () {
-    let items = this.state.items.map(item => {
-      return (<PodcastDetailItem data={item} key={item.id} itemClickedCallback={this.props.itemClickedCallback}/>)
+    let itemSource = null
+    if (this.state.searching) {
+      itemSource = this.state.searchResults
+    } else if (this.state.showingFavorites) {
+      itemSource = this.state.favorites
+    } else {
+      itemSource = this.state.items
+    }
+
+    const items = itemSource.map(item => {
+      return (<PodcastDetailItem data={item} key={item.id} itemClickedCallback={this.props.itemClickedCallback}
+                                 favoriteItemCallback={this.handleItemFavorited} />)
     })
 
-    const pagination = <Pagination prev next first last ellipsis items={this.state.pageCount} maxButtons={5}
-                                   activePage={this.state.page} onSelect={this.handlePageSelect}/>
-
+    let pagination = null
+    if (!this.state.searching) {
+      pagination = <Pagination prev next first last ellipsis items={this.state.pageCount} maxButtons={5}
+                               activePage={this.state.page} onSelect={this.handlePageSelect}/>
+    }
     return (
       <Grid id="podcast-details">
         <Row>
-          <Col md={3}>
+          <Col md={4}>
             <Button onClick={this.refresh}>
               <Glyphicon glyph="refresh"/> Refresh
             </Button>
             <Button onClick={this.randomPodcast}>
               <Glyphicon glyph="random"/> Random
             </Button>
+            <Button onClick={this.filterFavorites}>
+              <Glyphicon glyph="star" /> Favorites
+            </Button>
+          </Col>
+          <Col md={4} className="pull-right" >
+              <SearchBox feedId={this.props.params.id} searchResultCallback={this.handleSearch}
+              searchFinishedCallback={this.handleSearchStopped}/>
           </Col>
         </Row>
         {items}
@@ -330,12 +444,26 @@ const PodcastDetailItem = React.createClass({
     this.props.itemClickedCallback(this.props.data)
   },
 
+  favoriteItem: function () {
+    this.props.favoriteItemCallback(this.props.data)
+  },
+
   render: function () {
     const item = this.props.data
     const lastPos = moment.duration(item.last_position, 'seconds')
     const lastPosStr = `${lastPos.hours()} hr ${lastPos.minutes()} min`
     const duration = moment.duration(item.duration, 'seconds')
     const durationStr = `${duration.hours()} hr ${duration.minutes()} min`
+
+    let starGlyph = null
+    let starClassName = null
+    if (item.favorited) {
+      starGlyph = 'star'
+      starClassName = 'favorited-icon'
+    } else {
+      starGlyph = 'star-empty'
+      starClassName = ''
+    }
 
     return (
       <div className="media podcast-item">
@@ -355,6 +483,9 @@ const PodcastDetailItem = React.createClass({
             <Button onClick={this.clickItem}>
               <Glyphicon glyph="play"/> Play
             </Button>
+            <Button onClick={this.favoriteItem}>
+              <Glyphicon glyph={starGlyph} className={starClassName}/> Favorite
+            </Button>
           </div>
         </div>
       </div>
@@ -371,7 +502,7 @@ const NotFound = React.createClass({
 })
 
 ReactDOM.render(
-  <Router>
+  <Router history={hashHistory}>
     <Route path="/" component={App}>
       <IndexRoute component={PodcastList}/>
       <Route path="podcasts/:id/page/:page" component={PodcastDetails}/>

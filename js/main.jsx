@@ -412,16 +412,16 @@ const PodcastDetails = React.createClass({
         <Row>
           <Col md={4}>
             <Button onClick={this.refresh}>
-              <Glyphicon glyph="refresh"/> Refresh
+              <Glyphicon glyph="refresh"/> <span className="hidden-xs">Refresh</span>
             </Button>
             <Button onClick={this.randomPodcast}>
-              <Glyphicon glyph="random"/> Random
+              <Glyphicon glyph="random"/> <span className="hidden-xs">Random</span>
             </Button>
             <Button onClick={this.filterFavorites}>
-              <Glyphicon glyph="star" /> Favorites
+              <Glyphicon glyph="star"/> <span className="hidden-xs">Favorites</span>
             </Button>
           </Col>
-          <Col md={4} className="pull-right" >
+          <Col md={4} xs={12} mdOffset={4}>
               <SearchBox feedId={this.props.params.id} searchResultCallback={this.handleSearch}
               searchFinishedCallback={this.handleSearchStopped}/>
           </Col>

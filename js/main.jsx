@@ -201,7 +201,7 @@ const PodcastList = React.createClass({
     return (
       <Grid>
         <div className="form-inline pull-right">
-          <Button className="btn-lg" onClick={this.openModal}>+</Button>
+          <Button className="btn-lg" onClick={this.openModal}><Glyphicon glyph="plus"/></Button>
         </div>
         {modal}
         {heading}
@@ -403,14 +403,18 @@ const PodcastDetails = React.createClass({
     })
 
     let pagination = null
-    if (!this.state.searching) {
+    if (!this.state.searching && !this.state.showingFavorites) {
       pagination = <Pagination prev next first last ellipsis items={this.state.pageCount} maxButtons={5}
                                activePage={this.state.page} onSelect={this.handlePageSelect}/>
     }
     return (
       <Grid id="podcast-details">
         <Row>
-          <Col md={4}>
+          <Col md={4} xs={12} id="search-box-container" mdPush={8}>
+              <SearchBox feedId={this.props.params.id} searchResultCallback={this.handleSearch}
+              searchFinishedCallback={this.handleSearchStopped}/>
+          </Col>
+          <Col md={4} mdPull={4}>
             <Button onClick={this.refresh}>
               <Glyphicon glyph="refresh"/> <span className="hidden-xs">Refresh</span>
             </Button>
@@ -421,10 +425,7 @@ const PodcastDetails = React.createClass({
               <Glyphicon glyph="star"/> <span className="hidden-xs">Favorites</span>
             </Button>
           </Col>
-          <Col md={4} xs={12} mdOffset={4}>
-              <SearchBox feedId={this.props.params.id} searchResultCallback={this.handleSearch}
-              searchFinishedCallback={this.handleSearchStopped}/>
-          </Col>
+
         </Row>
         {items}
         {pagination}
@@ -473,13 +474,11 @@ const PodcastDetailItem = React.createClass({
           <p className="podcast-item-description">{item.description}</p>
           <div className="col-md-6 played-time">
             <p>Played <b>{lastPosStr}</b> of <b>{durationStr}</b></p>
-          </div>
-          <div className="item-buttons pull-right">
             <Button onClick={this.clickItem}>
-              <Glyphicon glyph="play"/> Play
+              <Glyphicon glyph="play"/> <span className="hidden-xs">Play</span>
             </Button>
             <Button onClick={this.favoriteItem}>
-              <Glyphicon glyph={starGlyph} className={starClassName}/> Favorite
+              <Glyphicon glyph={starGlyph} className={starClassName}/> <span className="hidden-xs">Favorite</span>
             </Button>
           </div>
         </div>

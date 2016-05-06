@@ -1,5 +1,5 @@
 import React from 'react'
-// import { ProgressBar } from 'react-bootstrap'
+import ReactDOM from 'react-dom'
 import classnames from 'classnames'
 import $ from 'jquery'
 
@@ -25,11 +25,11 @@ const ProgressBar = React.createClass({
 		);
 	},
 
-	seekTo: function(e){
+	seekTo: function(e) {
 		if (!this.props.percent) {
 			return;
 		}
-		var container = $(this.refs.progressBar.getDOMNode());
+		var container = $(ReactDOM.findDOMNode(this.refs.progressBar));
 		var containerStartX = container.offset().left;
 		var percent = (e.clientX - containerStartX) / container.width();	
 		percent = percent >= 1 ? 1 : percent;

@@ -15,7 +15,7 @@ const App = React.createClass({
   getInitialState() {
     return {
       currentItem: null,
-      lastSync: 0,
+      lastSync: moment(0),
       user: null
     }
   },
@@ -40,16 +40,17 @@ const App = React.createClass({
 
   handleTick(item, time) {
     const now = moment()
-    const nextUpdate = moment(this.state.lastSync).add(moment(UPDATE_POSITION_INTERVAL, 'seconds'))
+    const nextUpdate = this.state.lastSync.add(UPDATE_POSITION_INTERVAL * 1000)
 
     if (now.isBefore(nextUpdate) || time === 0) {
       return
     }
 
-    const t = Math.round(time)
+    item.last_position = Math.floor(time)
     $.ajax({
-      url: `/api/update_position/${item.id}/${t}`,
+      url: `/api/feed_items/${item.id}`,
       method: 'POST',
+      data: {item: JSON.stringify(item)},
       success: response => {
         if (response === 'OK') {
           const now = moment()
@@ -76,7 +77,7 @@ const App = React.createClass({
     let positionUpdate = <br />
 
     const lastSync = this.state.lastSync
-    if (lastSync !== 0) {
+    if (lastSync.year() !== 1970) {
       positionUpdate = <Row><p>Last sync: {lastSync.fromNow()}</p></Row>
     }
     // TODO add 'sync now' button
@@ -115,7 +116,7 @@ const PodcastList = React.createClass({
   getInitialState: function () {
     return {
       podcasts: [],
-      url: '/api/podcasts/',
+      url: '/api/feeds',
       showModal: false
     }
   },
@@ -147,7 +148,7 @@ const PodcastList = React.createClass({
     const feedUrl = $('#feed-url').val()
     if (feedUrl) {
       $.ajax({
-        url: '/api/podcast/',
+        url: '/api/feeds',
         method: 'POST',
         data: {url: feedUrl},
         done: item => {
@@ -235,7 +236,7 @@ const SearchBox = React.createClass({
     const id = this.props.feedId
     if (input.length >= 3) {
       $.ajax({
-        url: `/api/podcast/search/${id}`,
+        url: `/api/feeds/${id}/search`,
         method: 'POST',
         data: {query: input},
         dataType: 'json',
@@ -269,7 +270,7 @@ const PodcastDetails = React.createClass({
     const count = PAGE_LEN
     const offset = (pageNum - 1) * PAGE_LEN
 
-    const url = `/api/podcasts/${id}/${offset}/${count}`
+    const url = `/api/feeds/${id}/${offset}/${count}`
     $.ajax({
       url: url,
       dataType: 'json',
@@ -286,7 +287,7 @@ const PodcastDetails = React.createClass({
   randomPodcast: function () {
     const id = this.props.params.id
     $.ajax({
-      url: `/api/random_podcast/${id}`,
+      url: `/api/feeds/${id}/random`,
       dataType: 'json',
       success: data => {
         this.props.itemClickedCallback(data)
@@ -299,7 +300,7 @@ const PodcastDetails = React.createClass({
     const id = this.props.params.id
 
     $.ajax({
-      url: `/api/refresh/${id}`,
+      url: `/api/feeds/${id}`,
       method: 'POST',
       dataType: 'json',
       success: result => {
@@ -329,20 +330,17 @@ const PodcastDetails = React.createClass({
 
   handleItemFavorited: function (item) {
     const id = item.id
+    item.favorited = !item.favorited;
     $.ajax({
-      url: `/api/podcasts/fav/${id}`,
+      url: `/api/feed_items/${id}`,
       method: 'POST',
+      data: {item: JSON.stringify(item)},
       success: response => {
-        // TODO could be a lot more efficient
-        const newItems = this.state.items.slice()
-        const itemToChange = newItems.find(item => item.id === id)
-        const idx = newItems.indexOf(itemToChange)
-        itemToChange.favorited = response === 'true'
-        newItems[idx] = itemToChange
-
-        this.setState({
-          items: newItems
-        })
+        if (response === 'OK') {
+          this.forceUpdate()
+        } else {
+          alert(response)
+        }
       }
     })
   },
@@ -369,7 +367,7 @@ const PodcastDetails = React.createClass({
       if (this.state.favorites.length == 0) {
         const id = this.props.params.id
         $.ajax({
-          url: `/api/podcast/favorites/${id}`,
+          url: `/api/feeds/${id}/favorites`,
           method: 'GET',
           dataType: 'json',
           success: response => {

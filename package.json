@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "dependencies": {
     "classnames": "^2.2.3",
-    "history": "^1.13.1",
-    "howler": "^2.0.0-beta11",
+    "history": "^2.1.1",
+    "howler": "^2.0.0-beta12",
     "jquery": "^2.1.4",
     "moment": "^2.10.6",
     "react": "^15.0.1",
-    "react-bootstrap": "^0.28.1",
+    "react-bootstrap": "^0.29.3",
     "react-dom": "^15.0.1",
     "react-router": "^2.0.1"
   },

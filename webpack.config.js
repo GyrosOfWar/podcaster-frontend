@@ -39,7 +39,11 @@ module.exports = {
     devtool: 'eval-source-map',
     proxy: {
       '/api/*': {
-        target: 'http://localhost:5501',
+        target: 'http://localhost:8080',
+        secure: false
+      },
+      '/auth/*': {
+        target: 'http://localhost:8080',
         secure: false
       }
     }

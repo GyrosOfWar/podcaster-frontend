@@ -1,12 +1,16 @@
 require("./../sass/app.scss")
 
 import React from 'react'
-import { Router, Route, IndexRoute, Link, hashHistory } from 'react-router'
+import {Router, Route, IndexRoute, Link, hashHistory, withRouter} from 'react-router'
 import ReactDOM from 'react-dom'
 import $ from 'jquery'
-import { Navbar, Button, Grid, Row, Col, Image, Nav, NavItem, Glyphicon, Modal, Pagination, Input } from 'react-bootstrap'
+import {
+    Navbar, Button, Grid, Row, Col, Image, Nav, NavItem, Glyphicon,
+    Modal, Pagination, Input, FormGroup, ControlLabel, FormControl, Form
+} from 'react-bootstrap'
 import Player from './player/AudioPlayer'
 import moment from 'moment'
+import auth from './auth'
 
 const PAGE_LEN = 15
 const UPDATE_POSITION_INTERVAL = 15
@@ -25,17 +29,19 @@ const App = React.createClass({
   },
 
   getUser: function () {
-    $.ajax({
-      url: '/api/user',
-      method: 'GET',
-      dataType: 'json',
-      success: response => {
-        this.setState({
-          user: response
-        })
-      },
-      error: (xhr, status, err) => console.error(this.props.url, status, err.toString())
-    })
+    if (auth.isLoggedIn()) {
+      $.ajax({
+        url: '/api/user',
+        method: 'GET',
+        dataType: 'json',
+        success: response => {
+          this.setState({
+            user: response
+          })
+        },
+        error: (xhr, status, err) => console.error(this.props.url, status, err.toString())
+      })
+    }
   },
 
   handleTick(item, time) {
@@ -91,8 +97,8 @@ const App = React.createClass({
           </Navbar.Header>
           <Navbar.Collapse>
             <Nav pullRight>
-              <NavItem eventKey={1} href="/logout">
-                Logout
+              <NavItem eventKey={1}>
+                <Link to="/logout">Logout</Link>
               </NavItem>
             </Nav>
           </Navbar.Collapse>
@@ -129,7 +135,6 @@ const PodcastList = React.createClass({
     this.setState({showModal: false})
   },
 
-
   loadPodcasts: function () {
     $.ajax({
       url: this.state.url,
@@ -138,7 +143,6 @@ const PodcastList = React.createClass({
       error: (xhr, status, err) => console.error(this.props.url, status, err.toString())
     })
   },
-
 
   componentDidMount: function () {
     this.loadPodcasts()
@@ -493,11 +497,81 @@ const NotFound = React.createClass({
   }
 })
 
+const Login = withRouter(React.createClass({
+  getInitialState: function () {
+    return {
+      error: false
+    }
+  },
+
+  handleSubmit: function (event) {
+    event.preventDefault()
+
+    const username = $("#username").val();
+    const password = $("#password").val();
+
+    auth.login(username, password, function (response) {
+      if (response) {
+        $(document).ajaxSend((event, request, settings) => {
+          request.setRequestHeader('Authorization', 'Bearer ' + request.token)
+        })
+        const {location} = this.props
+        if (location.state && location.state.nextPathname) {
+          this.props.router.replace(location.state.nextPathname)
+        } else {
+          this.props.router.replace('/')
+        }
+      } else {
+        this.setState({error: true})
+      }
+    })
+  },
+
+  render: function () {
+    return (
+        <Form onSubmit={this.handleSubmit}>
+          <FormGroup controlId="username">
+            <ControlLabel>Username</ControlLabel>
+            <FormControl type="text" placeholder="Enter username" id="username"/>
+          </FormGroup>
+
+          <FormGroup controlId="password">
+            <ControlLabel>Password</ControlLabel>
+            <FormControl type="password" placeholder="Enter password" id="password"/>
+          </FormGroup>
+
+          <Button type="submit">Login</Button>
+        </Form>
+    )
+  }
+}))
+
+const Logout = React.createClass({
+  componentDidMount() {
+    auth.logout()
+  },
+
+  render() {
+    return <p>You are now logged out</p>
+  }
+})
+
+function requireAuth(nextState, replace) {
+  if (!auth.isLoggedIn()) {
+    replace({
+      pathname: '/login',
+      state: {nextPathname: nextState.location.pathname}
+    })
+  }
+}
+
 ReactDOM.render(
   <Router history={hashHistory}>
     <Route path="/" component={App}>
-      <IndexRoute component={PodcastList}/>
-      <Route path="podcasts/:id/page/:page" component={PodcastDetails}/>
+      <IndexRoute component={PodcastList} onEnter={requireAuth}/>
+      <Route path="login" component={Login}/>
+      <Route path="logout" component={Logout}/>
+      <Route path="podcasts/:id/page/:page" component={PodcastDetails} onEnter={requireAuth}/>
       <Route path="*" component={NotFound}/>
     </Route>
   </Router>,

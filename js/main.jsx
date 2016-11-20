@@ -1,19 +1,37 @@
 require("./../sass/app.scss")
 
-import React from 'react'
-import {Router, Route, IndexRoute, Link, hashHistory, withRouter} from 'react-router'
-import ReactDOM from 'react-dom'
-import $ from 'jquery'
+import React from "react";
+import {Router, Route, IndexRoute, Link, hashHistory, withRouter} from "react-router";
+import ReactDOM from "react-dom";
+import $ from "jquery";
 import {
-    Navbar, Button, Grid, Row, Col, Image, Nav, NavItem, Glyphicon,
-    Modal, Pagination, Input, FormGroup, ControlLabel, FormControl, Form
-} from 'react-bootstrap'
-import Player from './player/AudioPlayer'
-import moment from 'moment'
-import auth from './auth'
+  Navbar,
+  Button,
+  Grid,
+  Row,
+  Col,
+  Image,
+  Nav,
+  NavItem,
+  Glyphicon,
+  Modal,
+  Pagination,
+  Input,
+  FormGroup,
+  ControlLabel,
+  FormControl,
+  Form
+} from "react-bootstrap";
+import Player from "./player/AudioPlayer";
+import moment from "moment";
+import auth from "./auth";
 
 const PAGE_LEN = 15
 const UPDATE_POSITION_INTERVAL = 15
+
+function addAuthHeader(request) {
+  request.setRequestHeader('Authorization', 'Bearer ' + auth.getToken())
+}
 
 const App = React.createClass({
   getInitialState() {
@@ -33,6 +51,7 @@ const App = React.createClass({
       $.ajax({
         url: '/api/user',
         method: 'GET',
+        beforeSend: addAuthHeader,
         dataType: 'json',
         success: response => {
           this.setState({
@@ -56,6 +75,7 @@ const App = React.createClass({
     $.ajax({
       url: `/api/feed_items/${item.id}`,
       method: 'POST',
+      beforeSend: addAuthHeader,
       data: {item: JSON.stringify(item)},
       success: response => {
         if (response === 'OK') {
@@ -117,7 +137,6 @@ const App = React.createClass({
   }
 })
 
-
 const PodcastList = React.createClass({
   getInitialState: function () {
     return {
@@ -139,6 +158,7 @@ const PodcastList = React.createClass({
     $.ajax({
       url: this.state.url,
       dataType: 'json',
+      beforeSend: addAuthHeader,
       success: data => this.setState({podcasts: data}),
       error: (xhr, status, err) => console.error(this.props.url, status, err.toString())
     })
@@ -155,7 +175,9 @@ const PodcastList = React.createClass({
         url: '/api/feeds',
         method: 'POST',
         data: {url: feedUrl},
+        beforeSend: addAuthHeader,
         done: item => {
+          this.closeModal()
           this.setState({
             podcasts: [...this.state.podcasts, item]
           })
@@ -224,7 +246,7 @@ const Podcast = React.createClass({
     return (
       <Col sm={6} md={4} className="podcast">
         <Link to={link} className="podcast-image-link">
-          <Image src={item.image_url} className="podcast-image" thumbnail/>
+          <Image src={item.imageUrl} className="podcast-image" thumbnail/>
         </Link>
         <div className="caption">
           <h3>{item.title}</h3>
@@ -244,6 +266,7 @@ const SearchBox = React.createClass({
         method: 'POST',
         data: {query: input},
         dataType: 'json',
+        beforeSend: addAuthHeader,
         success: response => {
           this.props.searchResultCallback(response)
         }
@@ -278,6 +301,7 @@ const PodcastDetails = React.createClass({
     $.ajax({
       url: url,
       dataType: 'json',
+      beforeSend: addAuthHeader,
       success: data => {
         this.setState({
           items: data.items,
@@ -293,6 +317,7 @@ const PodcastDetails = React.createClass({
     $.ajax({
       url: `/api/feeds/${id}/random`,
       dataType: 'json',
+      beforeSend: addAuthHeader,
       success: data => {
         this.props.itemClickedCallback(data)
       },
@@ -307,6 +332,7 @@ const PodcastDetails = React.createClass({
       url: `/api/feeds/${id}`,
       method: 'POST',
       dataType: 'json',
+      beforeSend: addAuthHeader,
       success: result => {
         result.reverse()
         this.setState({
@@ -339,6 +365,7 @@ const PodcastDetails = React.createClass({
       url: `/api/feed_items/${id}`,
       method: 'POST',
       data: {item: JSON.stringify(item)},
+      beforeSend: addAuthHeader,
       success: response => {
         if (response === 'OK') {
           this.forceUpdate()
@@ -374,6 +401,7 @@ const PodcastDetails = React.createClass({
           url: `/api/feeds/${id}/favorites`,
           method: 'GET',
           dataType: 'json',
+          beforeSend: addAuthHeader,
           success: response => {
             this.setState({
               favorites: response,
@@ -401,7 +429,7 @@ const PodcastDetails = React.createClass({
 
     const items = itemSource.map(item => {
       return (<PodcastDetailItem data={item} key={item.id} itemClickedCallback={this.props.itemClickedCallback}
-                                 favoriteItemCallback={this.handleItemFavorited} />)
+                                 favoriteItemCallback={this.handleItemFavorited}/>)
     })
 
     let pagination = null
@@ -413,8 +441,8 @@ const PodcastDetails = React.createClass({
       <Grid id="podcast-details">
         <Row>
           <Col md={4} xs={12} id="search-box-container" mdPush={8}>
-              <SearchBox feedId={this.props.params.id} searchResultCallback={this.handleSearch}
-              searchFinishedCallback={this.handleSearchStopped}/>
+            <SearchBox feedId={this.props.params.id} searchResultCallback={this.handleSearch}
+                       searchFinishedCallback={this.handleSearchStopped}/>
           </Col>
           <Col md={4} mdPull={4}>
             <Button onClick={this.refresh}>
@@ -510,12 +538,9 @@ const Login = withRouter(React.createClass({
     const username = $("#username").val();
     const password = $("#password").val();
 
-    auth.login(username, password, function (response) {
+    auth.login(username, password, response => {
       if (response) {
-        $(document).ajaxSend((event, request, settings) => {
-          request.setRequestHeader('Authorization', 'Bearer ' + request.token)
-        })
-        const {location} = this.props
+        const location = this.props.location
         if (location.state && location.state.nextPathname) {
           this.props.router.replace(location.state.nextPathname)
         } else {
@@ -529,6 +554,7 @@ const Login = withRouter(React.createClass({
 
   render: function () {
     return (
+      <Grid>
         <Form onSubmit={this.handleSubmit}>
           <FormGroup controlId="username">
             <ControlLabel>Username</ControlLabel>
@@ -542,6 +568,7 @@ const Login = withRouter(React.createClass({
 
           <Button type="submit">Login</Button>
         </Form>
+      </Grid>
     )
   }
 }))

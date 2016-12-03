@@ -1,8 +1,8 @@
 require("./../sass/app.scss")
 
-import React from "react";
-import {Router, Route, IndexRoute, Link, hashHistory, withRouter} from "react-router";
-import ReactDOM from "react-dom";
+import * as React from "react";
+import { Router, Route, IndexRoute, Link, hashHistory, withRouter } from "react-router";
+import * as ReactDOM from "react-dom";
 import $ from "jquery";
 import {
   Navbar,
@@ -49,7 +49,7 @@ const App = React.createClass({
   getUser: function () {
     if (auth.isLoggedIn()) {
       $.ajax({
-        url: '/api/user',
+        url: '/api/users',
         method: 'GET',
         beforeSend: addAuthHeader,
         dataType: 'json',
@@ -64,26 +64,20 @@ const App = React.createClass({
   },
 
   handleTick(item, time) {
-    const now = moment()
-    const nextUpdate = this.state.lastSync.add(UPDATE_POSITION_INTERVAL * 1000)
-
-    if (now.isBefore(nextUpdate) || time === 0) {
-      return
-    }
-
-    item.last_position = Math.floor(time)
+    item.lastPosition = Math.floor(time)
+    const payload = JSON.stringify({ favorite: item.favorite, lastPosition: item.lastPosition})
+    console.log(payload)
     $.ajax({
       url: `/api/feed_items/${item.id}`,
       method: 'POST',
+      contentType: 'application/json',
+      data: payload,
       beforeSend: addAuthHeader,
-      data: {item: JSON.stringify(item)},
       success: response => {
-        if (response === 'OK') {
-          const now = moment()
-          this.setState({
-            lastSync: now
-          })
-        }
+        const now = moment()
+        this.setState({
+          lastSync: now
+        })
       }
     })
   },
@@ -96,9 +90,9 @@ const App = React.createClass({
     const item = this.state.currentItem
     let player
     if (item) {
-      player = <Player podcast={item} tickCallback={this.handleTick}/>
+      player = <Player podcast={item} tickCallback={this.handleTick} intervalDurationMs={UPDATE_POSITION_INTERVAL * 1000} />
     } else {
-      player = null
+      player = ""
     }
     let positionUpdate = <br />
 
@@ -118,7 +112,7 @@ const App = React.createClass({
           <Navbar.Collapse>
             <Nav pullRight>
               <NavItem eventKey={1}>
-                <Link to="/logout">Logout</Link>
+                Logout
               </NavItem>
             </Nav>
           </Navbar.Collapse>
@@ -209,7 +203,7 @@ const PodcastList = React.createClass({
         <Modal.Body>
           <div className="form-inline">
             <div className="form-group">
-              <label for="feed-url" className="sr-only">Feed-URL</label>
+              <label htmlFor="feed-url" className="sr-only">Feed-URL</label>
               <input type="text" id="feed-url" className="form-control" placeholder="Feed-URL" size="60"/>
             </div>
           </div>
@@ -239,14 +233,19 @@ const PodcastList = React.createClass({
 })
 
 const Podcast = React.createClass({
+  getImageUrl: function (item) {
+    return `/api/images/${item.hashedImageUrl}?size=350`
+  },
+
   render: function () {
-    let item = this.props.item
-    let link = `/podcasts/${item.id}/page/1`
+    const item = this.props.item
+    const link = `/podcasts/${item.id}/page/1`
+    const imageUrl = this.getImageUrl(item)
 
     return (
       <Col sm={6} md={4} className="podcast">
         <Link to={link} className="podcast-image-link">
-          <Image src={item.imageUrl} className="podcast-image" thumbnail/>
+          <Image src={imageUrl} className="podcast-image" thumbnail/>
         </Link>
         <div className="caption">
           <h3>{item.title}</h3>
@@ -276,7 +275,7 @@ const SearchBox = React.createClass({
     }
   },
   render: function () {
-    return <Input type="text" placeholder="Search" onChange={this.keyPressed} id="search-box"/>
+    return <FormControl type="text" placeholder="Search" onChange={this.keyPressed} id="search-box"/>
   }
 })
 
@@ -294,18 +293,15 @@ const PodcastDetails = React.createClass({
   },
 
   getItems: function (id, pageNum) {
-    const count = PAGE_LEN
-    const offset = (pageNum - 1) * PAGE_LEN
-
-    const url = `/api/feeds/${id}/${offset}/${count}`
+    const url = `/api/feeds/${id}/items?page=${pageNum - 1}&size=${PAGE_LEN}`
     $.ajax({
       url: url,
       dataType: 'json',
       beforeSend: addAuthHeader,
       success: data => {
         this.setState({
-          items: data.items,
-          pageCount: data.page_count
+          items: data.content,
+          pageCount: data.totalPages
         })
       },
       error: (xhr, status, err) => console.error(url, status, err.toString())
@@ -343,35 +339,29 @@ const PodcastDetails = React.createClass({
     })
   },
 
-  componentDidMount: function () {
-    this.getItems(this.props.params.id, this.props.params.page)
-  },
-
   componentWillReceiveProps: function (newProps) {
     this.getItems(newProps.params.id, newProps.params.page)
   },
 
   handlePageSelect: function (event, selectedEvent) {
     this.setState({
-      page: selectedEvent.eventKey
+      page: event
     })
-    this.getItems(this.props.params.id, selectedEvent.eventKey)
+    this.getItems(this.props.params.id, event)
   },
 
   handleItemFavorited: function (item) {
     const id = item.id
-    item.favorited = !item.favorited;
+    item.favorite = !item.favorite
+    const payload = JSON.stringify({ favorite: item.favorite, lastPosition: item.lastPosition})
     $.ajax({
       url: `/api/feed_items/${id}`,
       method: 'POST',
-      data: {item: JSON.stringify(item)},
+      contentType: 'application/json',
+      data: payload,
       beforeSend: addAuthHeader,
       success: response => {
-        if (response === 'OK') {
-          this.forceUpdate()
-        } else {
-          alert(response)
-        }
+        this.forceUpdate()
       }
     })
   },
@@ -434,8 +424,9 @@ const PodcastDetails = React.createClass({
 
     let pagination = null
     if (!this.state.searching && !this.state.showingFavorites) {
+      const page = this.state.page || 1;
       pagination = <Pagination prev next first last ellipsis items={this.state.pageCount} maxButtons={5}
-                               activePage={this.state.page} onSelect={this.handlePageSelect}/>
+                               activePage={page} onSelect={this.handlePageSelect}/>
     }
     return (
       <Grid id="podcast-details">
@@ -474,28 +465,33 @@ const PodcastDetailItem = React.createClass({
     this.props.favoriteItemCallback(this.props.data)
   },
 
+  getImageUrl: function(item) {
+    return `/api/images/${item.hashedImageUrl}?size=120`
+  },
+
   render: function () {
     const item = this.props.data
-    const lastPos = moment.duration(item.last_position, 'seconds')
+    const lastPos = moment.duration(item.lastPosition, 'seconds')
     const lastPosStr = `${lastPos.hours()} hr ${lastPos.minutes()} min`
     const duration = moment.duration(item.duration, 'seconds')
     const durationStr = `${duration.hours()} hr ${duration.minutes()} min`
 
     let starGlyph = null
     let starClassName = null
-    if (item.favorited) {
+    if (item.favorite) {
       starGlyph = 'star'
       starClassName = 'favorited-icon'
     } else {
       starGlyph = 'star-empty'
       starClassName = ''
     }
-
+    
+    const imageUrl = this.getImageUrl(item)
     return (
       <div className="media podcast-item">
         <div className="media-left media-middle">
           <img width="120px" className="media-object podcast-item-image hidden-xs"
-               src={item.image_url}
+               src={imageUrl}
                alt={item.title}/>
         </div>
 
@@ -583,11 +579,56 @@ const Logout = React.createClass({
   }
 })
 
+const HistoryItem = React.createClass({
+  render: function () {
+    return <li>{this.props.item.feedItem.title}</li>
+  }
+})
+
+const FeedHistory = React.createClass({
+  getInitialState: function () {
+    return {
+      history: []
+    }
+  },
+
+  getHistory: function () {
+    $.ajax({
+      url: `/api/users/history`,
+      method: 'GET',
+      dataType: 'json',
+      beforeSend: addAuthHeader,
+      success: response => {
+        this.setState({
+          history: response.content
+        })
+      }
+    })
+  },
+
+  componentDidMount: function () {
+    this.getHistory()
+  },
+
+  render: function () {
+    const history = this.state.history.map(e => <HistoryItem item={e} />)
+
+    return (
+      <Grid>
+        <p>History for user {this.props.user.name}</p>
+        <ul>
+          {history}
+        </ul> 
+      </Grid>
+    )
+  }
+})
+
 function requireAuth(nextState, replace) {
   if (!auth.isLoggedIn()) {
     replace({
       pathname: '/login',
-      state: {nextPathname: nextState.location.pathname}
+      state: { nextPathname: nextState.location.pathname }
     })
   }
 }
@@ -598,6 +639,7 @@ ReactDOM.render(
       <IndexRoute component={PodcastList} onEnter={requireAuth}/>
       <Route path="login" component={Login}/>
       <Route path="logout" component={Logout}/>
+      <Route path="history" component={FeedHistory} />
       <Route path="podcasts/:id/page/:page" component={PodcastDetails} onEnter={requireAuth}/>
       <Route path="*" component={NotFound}/>
     </Route>

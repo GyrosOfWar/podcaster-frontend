@@ -9,26 +9,32 @@ module.exports = {
   },
 
   plugins: [
-    new webpack.DefinePlugin({
-      'process.env': {
-        'NODE_ENV': JSON.stringify('production')
-      }
-    })
+    // new webpack.DefinePlugin({
+    //   'process.env': {
+    //     'NODE_ENV': JSON.stringify('production')
+    //   }
+    // }),
+    // new webpack.optimize.OccurrenceOrderPlugin(),
+    // new webpack.optimize.UglifyJsPlugin(),
+    // new webpack.optimize.DedupePlugin(),
   ],
 
   module: {
     loaders: [{
-      test: /\.jsx?$/,
-      exclude: /(node_modules|bower_components)/,
-      loader: 'babel',
-      query: {
-        sourceMap: true,
-        plugins: ['transform-react-jsx'],
-        presets: ['es2015']
-      }
-    },
+        test: /\.jsx?$/,
+        exclude: /(node_modules|bower_components)/,
+        loader: 'babel',
+        query: {
+          sourceMap: true,
+          plugins: ['transform-react-jsx'],
+          presets: ['es2015']
+        }
+      },
 
-      {test: /\.scss$/, loader: "style!css!sass"}
+      {
+        test: /\.scss$/,
+        loader: "style!css!sass"
+      }
     ]
   },
 

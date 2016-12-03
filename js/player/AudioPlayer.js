@@ -11,7 +11,7 @@ const Player = React.createClass({
   mixins: [SongFormatterMixin],
 
   getDefaultProps: function () {
-    return {podcast: null}
+    return {podcast: null, intervalDurationMs: 15 * 1000}
   },
 
   getInitialState: function () {
@@ -99,7 +99,7 @@ const Player = React.createClass({
     if (!this.howler) {
       this.initSoundObject()
     } else {
-      let songUrl = this.state.podcast.mp3_url
+      let songUrl = this.state.podcast.mp3Url
       if (songUrl != this.howler._src) {
         this.initSoundObject()
       } else {
@@ -113,7 +113,7 @@ const Player = React.createClass({
     this.setState({isLoading: true})
 
     this.howler = new Howl({
-      src: this.state.podcast.mp3_url,
+      src: this.state.podcast.mp3Url,
       volume: 1.0,
       onload: this.initSoundObjectCompleted,
       html5: true
@@ -141,7 +141,7 @@ const Player = React.createClass({
     this.howler.play()
     this.stopUpdateCurrentDuration()
     this.updateCurrentDuration()
-    this.interval = setInterval(this.updateCurrentDuration, 1000)
+    this.interval = setInterval(this.updateCurrentDuration, this.props.intervalDurationMs)
   },
 
   stop: function () {
